@@ -113,5 +113,13 @@ gtrack_grob = function(gt, windows, style = pub_style(), ...)
   tl = .mm2x(st$tick.mm)
   graphics::segments(x, min(line.loc), x, max(line.loc), lwd = st$lwd.axis, lend = 1)
   graphics::segments(x, line.loc, x - tl, line.loc, lwd = st$lwd.axis, lend = 1)
-  graphics::text(x - tl - .mm2x(st$ylab.gap.mm), line.loc, names(line.loc), adj = c(1, 0.5), cex = cex)
+  lab = names(line.loc)
+  if (length(line.loc) > 2) ## thin labels that would overlap (keep the first and every k-th)
+  {
+    h = 1.15 * graphics::strheight("0", cex = cex)
+    k = ceiling(h / min(diff(sort(line.loc))))
+    if (k > 1)
+      lab[(seq_along(lab) - 1) %% k != 0] = ""
+  }
+  graphics::text(x - tl - .mm2x(st$ylab.gap.mm), line.loc, lab, adj = c(1, 0.5), cex = cex)
 }
