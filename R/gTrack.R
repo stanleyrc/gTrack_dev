@@ -1239,9 +1239,20 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
                    links.feat = NULL, # links features override for links (must be nrow 1 or length(links) data frame
                    verbose=FALSE,
                    legend.params = list(),
+                   style = getOption("gTrack.style"), ## publication style list, see pub_style(); NULL = classic gTrack look
                    ... ## additional args to draw.grl OR last minute formatting changes to gTrack object
                    )
-{  
+{
+  old.style = .gt_style$style
+  .gt_style$style = style
+  on.exit(.gt_style$style <- old.style, add = TRUE)
+  if (!is.null(style))
+  {
+    if (!is.null(style$mar.mm))
+      graphics::par(mai = style$mar.mm / 25.4)
+    graphics::par(family = style$family, lwd = style$lwd.axis)
+  }
+
   if (!missing(y))
     windows = y
   
@@ -1345,6 +1356,10 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
   bottom.gaps = 0.5*y.gaps
   if (length(windows)==1)
     oth.ix = c()
+  if (!is.null(style) && length(windows) > 1) ## all windows are drawn side by side in one stack: do not reserve empty
+  {                                            ## space for one stack per window (legacy of GRangesList windows)
+    y.gaps = y.gaps[1]; top.gaps = top.gaps[1]; bottom.gaps = bottom.gaps[1]; oth.ix = c()
+  }
   ylim.stacks = data.frame(start = c(bottom.gaps[1], bottom.gaps[1] + cumsum(y.heights[oth.ix] + top.gaps[oth.ix] + bottom.gaps[oth.ix+1])),
                            end = cumsum(y.heights + top.gaps + bottom.gaps) - top.gaps)
 
@@ -1515,7 +1530,7 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
           range.y = range.y + abs(range.y)*0.2*c(-1, 1)
       }
 
-      this.y.ticks = pretty(range.y, formatting(.Object)$yaxis.pretty[j])
+      this.y.ticks = pretty(range.y, if (!is.null(.gts())) .gts()$yaxis.nticks else formatting(.Object)$yaxis.pretty[j])
 
       if (is.null(formatting(.Object)$y.cap))
           formatting(.Object)$y.cap = NA
@@ -1698,6 +1713,11 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
           ylab.angle = 0
       }
       this.cex.ylabel = ifelse(!is.null(formatting(.Object[j])$cex.ylabel), formatting(.Object[j])$cex.ylabel, cex.ylabel)
+      if (!is.null(st <- .gts()))
+        text(window.segs[[i]]$start[1], this.ylim.subplot[j, 'end'] + .mm2y(0.8),
+             this.tname, adj = c(0, 0), cex = .pt2cex(st$title.size), font = st$title.font,
+             col = if (!is.null(formatting(.Object[j])$name.col) && !is.na(formatting(.Object[j])$name.col)) formatting(.Object[j])$name.col else 'black')
+      else
       text(par('usr')[2], mean(unlist(this.ylim.subplot[j, c('start', 'end')])),
            this.tname, srt = ylab.angle, adj = ylab.adj, cex = this.cex.ylabel)
     }
@@ -2709,6 +2729,7 @@ draw.grl = function(grl,
                     spc.label = 0.05, # number between 0 and 1 indicating spacing of label
                     adj.label = c(0, 1),
                     cex.label = 1,
+                    font.label = 1, # font of grl labels (3 = italic, eg gene names)
                     gr.cex.label = 0.8 * cex.label,
                     gr.srt.label = 0,
                     gr.adj.label = c(0,0.5),
@@ -3381,7 +3402,7 @@ draw.grl = function(grl,
       print('Before axis draw')
       print(Sys.time() - now)
     }
-    plot.blank(xlim = xlim, ylim = ylim, bg.col = bg.col);
+    plot.blank(xlim = xlim, ylim = ylim, bg.col = if (!is.null(.gts())) 'transparent' else bg.col);
     new.axis = TRUE
   }
 
@@ -3414,10 +3435,18 @@ draw.grl = function(grl,
                                         #rep(min(xaxis.pos.label, xaxis.pos, yrange[1]), nrow(window.segs))
     sep.y1 = rep(yrange[2], nrow(window.segs))
 
+    if (!is.null(st <- .gts())) ## publication style: no background, thin dashed lines between windows only
+    {
+      if (length(sep.x0) > 1)
+        segments(sep.x0[-1], sep.y0[-1], sep.x0[-1], sep.y1[-1], lty = st$sep.lty, lwd = st$sep.lwd, col = st$sep.col)
+    }
+    else
+    {
     rect(sep.x0, sep.y0, sep.x1, sep.y1, border = bgborder.l, col = bgcol.l) ## JEREMIAH added bgcol.l
     
     segments(sep.x0, sep.y0, sep.x0, sep.y1, lty = sep.lty, lwd = sep.lwd)
     segments(sep.x1, sep.y0, sep.x1, sep.y1, lty = sep.lty, lwd = sep.lwd)
+    }
 
 ##       else
 ##       {
@@ -3447,7 +3476,9 @@ draw.grl = function(grl,
         xaxis.pos.label = xaxis.pos - 0.04*diff(ylim)
     }
 
-    if (new.axis)
+    if (new.axis && !is.null(.gts()))
+      .pub_xaxis(.gts(), windows, window.segs, xaxis.pos[1])
+    else if (new.axis)
     {
         nwin = length(windows);
 
@@ -3523,6 +3554,14 @@ draw.grl = function(grl,
       names(line.loc) = line.loc;
 
     #        abline(h = line.loc, col = y.grid.col, lty = y.grid.lty, lwd = y.grid.lwd)
+    if (!is.null(st <- .gts()))
+    {
+      if (isTRUE(st$ygrid))
+        segments(xlim[1], line.loc,  xlim[2], line.loc, col = y.grid.col, lty = y.grid.lty, lwd = st$sep.lwd)
+      .pub_yaxis(st, line.loc, min(window.segs$start) - .mm2x(0.8))
+    }
+    else
+    {
     segments(xlim[1], line.loc,  xlim[2], line.loc, col = y.grid.col, lty = y.grid.lty, lwd = y.grid.lwd)
 
     if (is.null(y.grid.cex))
@@ -3532,6 +3571,7 @@ draw.grl = function(grl,
       y.grid.cex = 1
 
     axis(2, at = line.loc, labels = names(line.loc), tick = TRUE, pos = line.loc[1], las = 2, cex.axis = y.grid.cex)
+    }
 
     if (!is.null(ylab))
         mtext(ylab, side = 2, at = mean(c(line.loc[1], line.loc[length(line.loc)])), line = 2, cex.lab = xaxis.cex.label)
@@ -3980,6 +4020,17 @@ draw.grl = function(grl,
 
             if (!is.null(edges$label))
             {
+              if (!is.null(st <- .gts())) ## publication style: label at the arc apex, coloured like the edge
+              {
+                lab.col = if (!is.null(edges$label.col)) edges$label.col else edges$col
+                up = sign(edges$y.pos.to - edges$y.pos.from + 0.01) >= 0 | edges$type == 'U'
+                ok = !is.na(edges$label) & nchar(as.character(edges$label)) > 0
+                if (any(ok))
+                  text(((edges$x.pos.from + edges$x.pos.to)/2)[ok],
+                       (pmax(edges$y.pos.from, edges$y.pos.to) + ifelse(edges$type == 'U', 0.75*abs(edges$v), 0) + .mm2y(0.4))[ok],
+                       edges$label[ok], adj = c(0.5, 0), col = lab.col[ok], cex = .pt2cex(st$label.size))
+              }
+              else
               text((edges$x.pos.from + edges$x.pos.to)/2, edges$y.pos.from + 0.5*edges$v*sign(edges$y.pos.to - edges$y.pos.from + 0.01),
                    edges$label, adj = c(0.5, 0.5), col = 'black')
             }
@@ -4241,13 +4292,13 @@ draw.grl = function(grl,
 
         if (adj.label[2] == 0)
           text(grl.segs.u$pos1, grl.segs.u$y+grl.segs.u$ywid + 0.005*diff(ylim),
-               grl.segs.u$grl.labels, adj = adj.label, cex = grl.segs.u$grl.cex, col = grl.segs.u$grl.cols)
+               grl.segs.u$grl.labels, adj = adj.label, cex = grl.segs.u$grl.cex * .cexscale(), col = grl.segs.u$grl.cols, font = font.label)
         if  (adj.label[2] == 0.5)
           text(grl.segs.u$pos1-0.005*diff(xlim), grl.segs.u$y,
-               grl.segs.u$grl.labels, adj = adj.label, cex = grl.segs.u$grl.cex, col = grl.segs.u$grl.cols)
+               grl.segs.u$grl.labels, adj = adj.label, cex = grl.segs.u$grl.cex * .cexscale(), col = grl.segs.u$grl.cols, font = font.label)
         else
           text(grl.segs.u$pos1, grl.segs.u$y-grl.segs.u$ywid - 0.005*diff(ylim),
-               grl.segs.u$grl.labels, adj = adj.label, cex = grl.segs.u$grl.cex, col = grl.segs.u$grl.cols)
+               grl.segs.u$grl.labels, adj = adj.label, cex = grl.segs.u$grl.cex * .cexscale(), col = grl.segs.u$grl.cols, font = font.label)
       }
       else
       {
@@ -4260,7 +4311,7 @@ draw.grl = function(grl,
         grl.segs.u$grl.cols = grl.props$grl.cols[match(grl.segs.u$group, grl.props$group)]
 
         text(adj.label[1]*grl.segs.u$pos1 + (1-adj.label[1])*grl.segs.u$pos2, adj.label[2]*grl.segs.u$y0 + (1-adj.label[2])*grl.segs.u$y1,
-             grl.segs.u$grl.labels, adj = adj.label, cex = grl.segs.u$grl.cex, col = grl.segs.u$grl.cols)
+             grl.segs.u$grl.labels, adj = adj.label, cex = grl.segs.u$grl.cex * .cexscale(), col = grl.segs.u$grl.cols, font = font.label)
 
       }
 

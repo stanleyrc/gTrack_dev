@@ -45,4 +45,5 @@ Suggests:
     testthat (>= 2.0),
     covr,
     pkgdown,
-    spatstat
+    spatstat,
+    gridGraphics
