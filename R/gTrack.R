@@ -3813,7 +3813,9 @@ draw.grl = function(grl,
         path.h[connector.args$cyclic] = path.cex.h * diff(par('usr')[1:2])/20
 
         ## workaround current lines() limitation in connectors
-        if (any(lty3 <- connector.args$lty == 3))
+        ## options(gTrack.path.bridges = FALSE) skips the dotted bridges to / from segments outside the window
+        ## (for figures that draw each window separately and join the windows themselves)
+        if (any(lty3 <- connector.args$lty == 3) && isTRUE(getOption('gTrack.path.bridges', TRUE)))
           connectors(connector.args$x0[lty3], connector.args$y0[lty3], connector.args$strand0[lty3],
                      connector.args$x1[lty3], connector.args$y1[lty3], ifelse(connector.args$strand1[lty3] == '+', '-', '+'),
                      type = connector.args$type[lty3],
