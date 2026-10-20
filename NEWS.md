@@ -11,6 +11,7 @@ gTrack 0.1.0.9000 (feature/pub-style)
 * `pub_style(arc.style = "bell")`: one renderer for every junction in a multi-window plot: ALT edges are bells from both segment ends with height ~ log10(`edges$span`),
   kept inside the track; REF edges straight; edges to segments outside the windows are short arrows labelled `edges$dangle.label` in a row under the track;
   edge labels above the apex with a white halo, moved off other labels and arcs; walk paths on one line joined by bells.
+* `pub_style(arc.strand = TRUE, arc.hook.mm = )`: strand-aware bells: each end leaves its breakend sideways towards the joined segment end (dup-like hooks outward, deletion-like arches between inner edges, inversions same side); walk-path bells likewise.
 * `name.pos = "right"` formatting: track title right of the windows. `pub_window_layout()`: window positions (fraction of the plot width) for overlays / hit regions.
 * Without a style gTrack draws exactly as before.
 

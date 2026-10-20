@@ -47,6 +47,11 @@
 #' @param label.halo white halo behind edge labels; with arc.style "bell" edge labels sit above the bell apex and are moved
 #'   apart (simple repel) when they would overlap
 #' @param dangle.mm length of the dangling-edge arrow (x, y) in mm
+#' @param arc.strand strand-aware bells (arc.style "bell"): each end leaves its breakend horizontally towards the side it joins (a "+" breakend =
+#'   right end of its segment -> rightwards, "-" -> leftwards) for arc.hook.mm before arching over, so a duplication-like junction hooks outward
+#'   past both breakends, a deletion-like one arches between the inner edges and an inversion (++ / --) leaves both ends on the same side
+#'   (the classic gTrack gGraph hook); the walk-path bells use the exit / entry side of each walk segment the same way
+#' @param arc.hook.mm horizontal reach of the hook in mm
 #' @return list
 #' @export
 pub_style = function(family = "Helvetica", fontsize = 7, title.size = 8, title.font = 1, label.size = 6,
@@ -55,7 +60,7 @@ pub_style = function(family = "Helvetica", fontsize = 7, title.size = 8, title.f
                      yaxis.nticks = 2, sep.col = "grey45", sep.lty = 2, sep.lwd = 0.4,
                      mar.mm = c(6.5, 7, 1, 2), ygrid = FALSE, win.widths = NULL, xaxis.chr.merge = FALSE,
                      arc.style = "gtrack", arc.band = 0.35, arc.span = c(1e3, 1e8), arc.range = c(0.3, 1), label.halo = TRUE,
-                     dangle.mm = c(1.6, 1.4))
+                     dangle.mm = c(1.6, 1.4), arc.strand = FALSE, arc.hook.mm = 1.2)
 {
   structure(as.list(environment()), class = c("gTrackStyle", "list"))
 }
@@ -186,6 +191,26 @@ gtrack_grob = function(gt, windows, style = pub_style(), ...)
   list(x = px, y = py)
 }
 
+## internal: one bell per edge, strand-aware when st$arc.strand: ends at (x0, y0) and (x1, y1), sides s0 / s1 (+1 = joins the right end of its segment,
+## -1 = the left end), apex control height yt.  Returns the drawn points (for label repel).  Without arc.strand: the symmetric bell (vertical take-off).
+.pub_bells = function(st, x0, y0, s0, x1, y1, s1, yt, col, lwd, lty, n = 60)
+{
+  if (!length(x0)) return(NULL)
+  hk = if (isTRUE(st$arc.strand)) .mm2x(st$arc.hook.mm) else 0
+  t = seq(0, 1, length.out = n); B = sapply(0:5, function(i) choose(5, i) * t^i * (1 - t)^(5 - i))
+  pts = lapply(seq_along(x0), function(k)
+  {
+    ## take-off: horizontal towards the joined side for hk, then up to the apex height; landing mirrored
+    cx = c(x0[k], x0[k] + s0[k] * hk, x0[k] + s0[k] * hk, x1[k] + s1[k] * hk, x1[k] + s1[k] * hk, x1[k])
+    if (hk == 0) cx = c(x0[k], x0[k], x0[k], x1[k], x1[k], x1[k])
+    cy = c(y0[k], y0[k], yt[k], yt[k], y1[k], y1[k])
+    cbind(B %*% cx, B %*% cy)
+  })
+  for (k in seq_along(pts)) graphics::lines(pts[[k]][, 1], pts[[k]][, 2], col = col[(k - 1) %% length(col) + 1], lwd = lwd[(k - 1) %% length(lwd) + 1],
+                                            lty = lty[(k - 1) %% length(lty) + 1], lend = 1)
+  do.call(rbind, pts)
+}
+
 ## internal: points along the 6-point bezier that connectors() draws for a bell (type "U", h = 0) from (x0, y0) to (x1, y1) with top control y = yt
 .bell_pts = function(x0, y0, x1, y1, yt, n = 40)
 {
@@ -219,11 +244,10 @@ gtrack_grob = function(gt, windows, style = pub_style(), ...)
     base = pmax(edges$y.pos.from[a], edges$y.pos.to[a])
     room = yr[2] - base - 1.5 * lab.h
     h = pmax(pmin(band * f, room), 0.12 * band)
-    connectors(edges$x.pos.from[a], edges$y.pos.from[a], edges$dir.from[a], edges$x.pos.to[a], edges$y.pos.to[a], edges$dir.to[a],
-               v = h / 0.625, h = 0, type = "U", f.arrow = FALSE, b.arrow = FALSE, cex.arrow = 0, col.arrow = edges$col[a],
-               lwd = edges$lwd[a], lty = edges$lty[a], col = edges$col[a])
+    obst = .pub_bells(st, edges$x.pos.from[a], edges$y.pos.from[a], ifelse(edges$dir.from[a] == '+', 1, -1),
+                      edges$x.pos.to[a], edges$y.pos.to[a], ifelse(edges$dir.to[a] == '+', 1, -1), base + h / 0.625,
+                      col = edges$col[a], lwd = edges$lwd[a], lty = edges$lty[a])
     apex[a] = base + h
-    obst = .bell_pts(edges$x.pos.from[a], edges$y.pos.from[a], edges$x.pos.to[a], edges$y.pos.to[a], base + h / 0.625)
   }
   else obst = NULL
   ## dangling ALT edges (mate segment outside the windows): short arrow from the segment end, pointing out and down; the mate locus

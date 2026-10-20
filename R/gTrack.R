@@ -3842,9 +3842,9 @@ draw.grl = function(grl,
             fx = abs(ca$x1 - ca$x0) / diff(par('usr')[1:2])
             room = yr[2] - pmax(ca$y0, ca$y1)
             hh = pmax(room * affine.map(fx, xlim = c(0, 1), ylim = st$arc.range, cap = TRUE), 0.1 * room)
-            connectors(ca$x0, ca$y0, ifelse(ca$strand0 == '+', '+', '-'), ca$x1, ca$y1, ifelse(ca$strand1 == '+', '-', '+'),
-                       type = 'U', h = 0, v = hh / 0.625, lty = 1, lwd = ca$path.lwd, col = ca$path.col,
-                       f.arrow = FALSE, b.arrow = FALSE, cex.arrow = 0, col.arrow = ca$path.col)
+            ## exit side of a + segment = its right end, entry side = its left end (and the reverse for -)
+            .pub_bells(st, ca$x0, ca$y0, ifelse(ca$strand0 == '+', 1, -1), ca$x1, ca$y1, ifelse(ca$strand1 == '+', -1, 1),
+                       pmax(ca$y0, ca$y1) + hh / 0.625, col = ca$path.col, lwd = ca$path.lwd, lty = 1)
           }
         }
         else if (any(lty1 <- connector.args$lty == 1))
