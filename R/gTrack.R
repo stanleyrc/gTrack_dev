@@ -1713,7 +1713,11 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
           ylab.angle = 0
       }
       this.cex.ylabel = ifelse(!is.null(formatting(.Object[j])$cex.ylabel), formatting(.Object[j])$cex.ylabel, cex.ylabel)
-      if (!is.null(st <- .gts()))
+      if (!is.null(st <- .gts()) && identical(formatting(.Object[j])$name.pos, 'right')) ## title right of the last window, centred on the track
+        text(max(window.segs[[i]]$end) + .mm2x(1.2), mean(unlist(this.ylim.subplot[j, c('start', 'end')])),
+             this.tname, adj = c(0, 0.5), cex = .pt2cex(st$title.size), font = st$title.font,
+             col = if (!is.null(formatting(.Object[j])$name.col) && !is.na(formatting(.Object[j])$name.col)) formatting(.Object[j])$name.col else 'black')
+      else if (!is.null(st))
         text(window.segs[[i]]$start[1], this.ylim.subplot[j, 'end'] + .mm2y(0.8),
              this.tname, adj = c(0, 0), cex = .pt2cex(st$title.size), font = st$title.font,
              col = if (!is.null(formatting(.Object[j])$name.col) && !is.na(formatting(.Object[j])$name.col)) formatting(.Object[j])$name.col else 'black')
@@ -3288,6 +3292,8 @@ draw.grl = function(grl,
             else
               return(0)
           }))
+          if (!is.null(st <- .gts()) && identical(st$arc.style, 'bell')) ## publication bell style: every path on one line, joined by bells
+            grl.segs$y.relbin = 0
 
           contig.lim = data.frame(
             group = names(vaggregate(y.relbin ~ group, data = grl.segs, FUN = max)),
@@ -3826,7 +3832,22 @@ draw.grl = function(grl,
                      col.arrow = path.col.arrow,
                      cex.arrow = grl.segs$ywid[1]*path.cex.arrow, f.arrow = T)
 
-        if (any(lty1 <- connector.args$lty == 1))
+        if (!is.null(st <- .gts()) && identical(st$arc.style, 'bell')) ## publication bell style: consecutive path segments joined by bells
+        {
+          lty1 = connector.args$lty == 1 & !is.na(connector.args$ix0) & !is.na(connector.args$ix1)
+          if (any(lty1))
+          {
+            yr = if (!is.null(ylim.subplot)) range(ylim.subplot) else range(grl.segs$y, na.rm = TRUE) + c(-1, 1) * max(grl.segs$ywid, na.rm = TRUE)
+            ca = connector.args[lty1, , drop = FALSE]
+            fx = abs(ca$x1 - ca$x0) / diff(par('usr')[1:2])
+            room = yr[2] - pmax(ca$y0, ca$y1)
+            hh = pmax(room * affine.map(fx, xlim = c(0, 1), ylim = st$arc.range, cap = TRUE), 0.1 * room)
+            connectors(ca$x0, ca$y0, ifelse(ca$strand0 == '+', '+', '-'), ca$x1, ca$y1, ifelse(ca$strand1 == '+', '-', '+'),
+                       type = 'U', h = 0, v = hh / 0.625, lty = 1, lwd = ca$path.lwd, col = ca$path.col,
+                       f.arrow = FALSE, b.arrow = FALSE, cex.arrow = 0, col.arrow = ca$path.col)
+          }
+        }
+        else if (any(lty1 <- connector.args$lty == 1))
           connectors(connector.args$x0[lty1], connector.args$y0[lty1], connector.args$strand0[lty1],
                      connector.args$x1[lty1], connector.args$y1[lty1], ifelse(connector.args$strand1[lty1] == '+', '-', '+'),
                      type = connector.args$type[lty1],
@@ -4012,6 +4033,13 @@ draw.grl = function(grl,
                 edges$h[ix] = dangle.w*edges$h.override[ix]
 
 
+            if (!is.null(st <- .gts()) && identical(st$arc.style, 'bell')) ## publication bell style (pub_style.R)
+            {
+              yr = if (!is.null(ylim.subplot)) range(ylim.subplot) else if (!all(is.na(y.grid))) range(y.grid) else range(c(grl.segs$y), na.rm = TRUE)
+              .pub_draw_edges(st, edges, yr, ws = window.segs)
+            }
+            else
+            {
             connectors(edges$x.pos.from, edges$y.pos.from, edges$dir.from,
                        edges$x.pos.to, edges$y.pos.to, edges$dir.to,
                        v = edges$v, h = edges$h, type = edges$type,
@@ -4036,6 +4064,7 @@ draw.grl = function(grl,
               text((edges$x.pos.from + edges$x.pos.to)/2, edges$y.pos.from + 0.5*edges$v*sign(edges$y.pos.to - edges$y.pos.from + 0.01),
                    edges$label, adj = c(0.5, 0.5), col = 'black')
             }
+            } ## end classic connectors
           }
         }
       }
@@ -4295,7 +4324,8 @@ draw.grl = function(grl,
         if (adj.label[2] == 0)
           text(grl.segs.u$pos1, grl.segs.u$y+grl.segs.u$ywid + 0.005*diff(ylim),
                grl.segs.u$grl.labels, adj = adj.label, cex = grl.segs.u$grl.cex * .cexscale(), col = grl.segs.u$grl.cols, font = font.label)
-        if  (adj.label[2] == 0.5)
+        if (adj.label[2] == 0 && !is.null(.gts())) {} ## pub style: label above only (classic draws it above and below)
+        else if  (adj.label[2] == 0.5)
           text(grl.segs.u$pos1-0.005*diff(xlim), grl.segs.u$y,
                grl.segs.u$grl.labels, adj = adj.label, cex = grl.segs.u$grl.cex * .cexscale(), col = grl.segs.u$grl.cols, font = font.label)
         else
@@ -5289,6 +5319,16 @@ gr.flatmap = function(gr, windows, gap = 0, strand.agnostic = TRUE, squeeze = FA
   h = gr.findoverlaps(gr, windows);
 
   window.segs = gr.flatten(windows, gap = gap)
+  scl = rep(1, length(windows))
+  ## publication style win.widths: each window drawn at a fixed share of the total width (data keep a linear scale inside it)
+  if (!is.null(st <- .gts()) && !is.null(st$win.widths) && length(st$win.widths) == length(windows) && length(windows) > 0)
+  {
+    tot = sum(as.numeric(width(windows))); dw = st$win.widths / sum(st$win.widths) * tot
+    st0 = window.segs$start[1]
+    window.segs$start = st0 + c(0, cumsum(dw + gap))[seq_along(dw)]
+    window.segs$end = window.segs$start + dw
+    scl = dw / as.numeric(width(windows))
+  }
 
   grl.segs = BiocGenerics::as.data.frame(gr);
   grl.segs = grl.segs[values(h)$query.id, ];
@@ -5296,10 +5336,11 @@ gr.flatmap = function(gr, windows, gap = 0, strand.agnostic = TRUE, squeeze = FA
   grl.segs$window = values(h)$subject.id
   grl.segs$start = start(h);
   grl.segs$end = end(h);
-  grl.segs$pos1 = pmax(window.segs[values(h)$subject.id, ]$start,
-                       window.segs[values(h)$subject.id, ]$start + grl.segs$start - start(windows)[values(h)$subject.id])
-  grl.segs$pos2 = pmin(window.segs[values(h)$subject.id, ]$end,
-                       window.segs[values(h)$subject.id, ]$start + grl.segs$end - start(windows)[values(h)$subject.id])
+  sid = values(h)$subject.id
+  grl.segs$pos1 = pmax(window.segs[sid, ]$start,
+                       window.segs[sid, ]$start + (grl.segs$start - start(windows)[sid]) * scl[sid])
+  grl.segs$pos2 = pmin(window.segs[sid, ]$end,
+                       window.segs[sid, ]$start + (grl.segs$end - start(windows)[sid]) * scl[sid])
   grl.segs$chr = grl.segs$seqnames
 
   if (squeeze)
