@@ -13,6 +13,8 @@ gTrack 0.1.0.9000 (feature/pub-style)
   edge labels above the apex with a white halo, moved off other labels and arcs; walk paths on one line joined by bells.
 * `pub_style(arc.strand = TRUE, arc.hook.mm = )`: strand-aware bells: each end leaves its breakend sideways towards the joined segment end (dup-like hooks outward, deletion-like arches between inner edges, inversions same side); walk-path bells likewise.
 * `name.pos = "right"` formatting: track title right of the windows. `pub_window_layout()`: window positions (fraction of the plot width) for overlays / hit regions.
+* `edges$type.override` ("U" / "S", NA = automatic): connector type per edge, so a junction between segments at different CN can be drawn as an arc
+  ("U", shaped by `v.override` / `h.override`) instead of the automatic "S" step that gTrack picks whenever the two ends differ by more than the segment height.
 * Without a style gTrack draws exactly as before.
 
 gTrack 0.1.0 2016-3-18

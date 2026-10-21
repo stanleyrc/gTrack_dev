@@ -4000,6 +4000,9 @@ draw.grl = function(grl,
             #                      edges$type = ifelse(edges$y.pos.from == edges$y.pos.to, 'U', 'S')
             uthresh = max(grl.segs$ywid)
             edges$type = ifelse(abs(edges$y.pos.from - edges$y.pos.to) <= uthresh, 'U', 'S')
+            if (!is.null(edges$type.override)) ## per-edge connector type ('U' arc / 'S' step; NA = automatic), e.g. junction arcs between segments at different CN
+              if (any(ix <- !is.na(edges$type.override) & edges$type.override %in% c('U', 'S')))
+                edges$type[ix] = edges$type.override[ix]
 
             edges$f.arrow = T
             edges$b.arrow = F
