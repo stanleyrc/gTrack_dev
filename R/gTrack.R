@@ -3293,7 +3293,7 @@ draw.grl = function(grl,
               return(0)
           }))
           if (!is.null(st <- .gts()) && identical(st$arc.style, 'bell')) ## publication bell style: every path on one line, joined by bells
-            grl.segs$y.relbin = 0
+            grl.segs$y.relbin = if (!is.null(grl.segs$path.y)) as.numeric(grl.segs$path.y) else 0  ## optional per-node level (mcols 'path.y', 0 = base line) so a path can leave the single line
 
           contig.lim = data.frame(
             group = names(vaggregate(y.relbin ~ group, data = grl.segs, FUN = max)),
