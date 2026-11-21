@@ -1487,6 +1487,15 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
       if (is.null(formatting(.Object)$log))
         formatting(.Object)$log = NA
 
+      ## y.log1p: y = log10(1 + value), so 0-copy segments stay drawable and 1-400 copies share one axis; ticks are
+      ## labeled in original units (0, 10, 100, ...)
+      y.log1p = !is.null(formatting(.Object)$y.log1p) && isTRUE(as.logical(formatting(.Object)$y.log1p[j]))
+      if (y.log1p)
+      {
+        values(tmp.dat)[, this.y.field] = log10(1 + pmax(values(tmp.dat)[, this.y.field], 0))
+        for (yy in c('y0', 'y1'))
+          if (!is.na(formatting(.Object)[j, yy])) formatting(.Object)[j, yy] = log10(1 + max(formatting(.Object)[j, yy], 0))
+      }
       if (!is.na(formatting(.Object)$log[j]))
         if (formatting(.Object)$log[j])
         {
@@ -1532,6 +1541,14 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
           range.y = range.y + abs(range.y)*0.2*c(-1, 1)
       }
 
+      if (y.log1p) { ## ticks at 0, 1, 2, 5, 10, 20, 50, 100, ... (original units), at most yaxis.nticks + 1 of them, always 0 and the top one
+        orig = c(0, as.vector(outer(c(1, 2, 5), 10^(0:5))))
+        orig = orig[log10(1 + orig) <= range.y[2] + 1e-9]
+        nt = if (!is.null(.gts())) { nt.j = formatting(.Object)$yaxis.nticks.track[j]; if (!is.null(nt.j) && !is.na(nt.j)) nt.j else .gts()$yaxis.nticks } else 3
+        keep = unique(c(1, round(seq(1, length(orig), length.out = min(length(orig), nt + 1)))))
+        this.y.ticks = structure(log10(1 + orig[keep]), orig = orig[keep])
+        range.y[1] = 0
+      } else
       this.y.ticks = pretty(range.y, if (!is.null(.gts())) { nt.j = formatting(.Object)$yaxis.nticks.track[j]; if (!is.null(nt.j) && !is.na(nt.j)) nt.j else .gts()$yaxis.nticks } else formatting(.Object)$yaxis.pretty[j])  ## pub style: per-track override formatting(gt)$yaxis.nticks.track
 
       if (is.null(formatting(.Object)$y.cap))
@@ -1571,6 +1588,7 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
       {
         # make pretty grid in range.y
         this.y.grid = structure(affine.map(this.y.ticks, ylim = unlist(this.ylim.subplot[j, ]), xlim = range(this.y.ticks)), names = this.y.ticks)
+        if (!is.null(attr(this.y.ticks, 'orig'))) names(this.y.grid) = attr(this.y.ticks, 'orig')
 
         if (!is.na(formatting(.Object)$log[j]))
           if (formatting(.Object)$log[j])
