@@ -1344,8 +1344,10 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
   ## set the gaps between the gTracks
   if (is.null(y.gaps) )
     y.gaps = y.heights*0.8
-  else if (length(y.gaps) != length(windows))
-    y.gaps = rep(y.gaps[1], length(windows))
+  else if (length(y.gaps) != length(y.heights))
+    ## one stack (y.heights is a single value since windows became a GRanges): one gap value, not one per window,
+    ## otherwise a user y.gaps with several windows adds a gap per window and squashes the tracks
+    y.gaps = rep(y.gaps[1], length(y.heights))
 
   ## ensure that we don't plot too much
   if (!is.na(max.ranges))
@@ -3495,7 +3497,10 @@ draw.grl = function(grl,
         #   if (is.na(xaxis.suffix) | nchar(xaxis.suffix)==0)
         #     xaxis.suffix = NULL
 
-        draw_x_ticks(xaxis.interval, windows, mapped, winlim, xlim, ylim, xaxis.pos, xaxis.suffix, xaxis.unit, xaxis.cex.tick, xaxis.ticklen, xaxis.round)
+        tick.bottom = draw_x_ticks(xaxis.interval, windows, mapped, winlim, xlim, ylim, xaxis.pos, xaxis.suffix, xaxis.unit, xaxis.cex.tick, xaxis.ticklen, xaxis.round)
+        ## the window label goes below the (vertical) tick labels, never on top of them
+        if (is.finite(tick.bottom) && xaxis.pos.label > tick.bottom)
+          xaxis.pos.label = tick.bottom - 0.01*diff(ylim)
 
 
           # then (label) text
@@ -3526,12 +3531,12 @@ draw.grl = function(grl,
                        begin.text,'-', newline,
                        end.text, ' ', xaxis.suffix, newline, width.text, sep = ''),
 
-                 cex = xaxis.cex.label*0.7, srt = 0, adj = c(0.5, 0), srt=xaxis.label.angle)
+                 cex = xaxis.cex.label*0.7, adj = c(0.5, 1), srt=xaxis.label.angle)
         } else {
             text(rowMeans(window.segs[, c('start', 'end')]), rep(xaxis.pos.label, nwin),
                  paste(xaxis.prefix, ' ',  seqnames(windows),
                        sep = ''),
-                 cex = xaxis.cex.label*0.7, srt = 0, adj = c(0.5, 0), srt=xaxis.label.angle)
+                 cex = xaxis.cex.label*0.7, adj = c(0.5, 1), srt=xaxis.label.angle)
         }
     }
   }
@@ -5046,10 +5051,16 @@ draw.triangle <- function(grl,mdata,y,
         {
             ## plot the legend
             if (!islog)
-                txt = format(c(cmap.min, 0.5*(cmap.max-cmap.min) + cmap.min, cmap.max), digits=1)
-            else
-                txt = format(c(10^cmap.min, 10^(0.3333*((cmap.max-cmap.min) + cmap.min)), 10^(0.66667*((cmap.max-cmap.min) + cmap.min)), 10^(cmap.max)), digits=1)
-            color.bar(lut = cs, xpos=0, ypos=ylim.subplot[1] + diff(ylim.subplot)*0.3, width=500, height=diff(ylim.subplot)*0.3,
+                txt = format(signif(c(cmap.min, 0.5*(cmap.max-cmap.min) + cmap.min, cmap.max), 2), trim = TRUE)
+            else ## log10 data: label the back-transformed values at the bottom, middle and top of the color range
+                txt = format(signif(10^(cmap.min + c(0, 1/2, 1)*(cmap.max-cmap.min)), 2), trim = TRUE)
+            ## plot(..., legend.params = list(tri.xpos, tri.ypos, tri.height)): color-bar position for triangle tracks;
+            ## tri.xpos is a fraction of the window width (default 0 = left edge; e.g. 0.97 = right margin), tri.ypos and
+            ## tri.height are fractions of the track height (defaults 0.25 and 0.5)
+            lxp = if (is.null(leg.params$tri.xpos)) 0 else leg.params$tri.xpos * diff(xlim) + xlim[1]
+            lyp = if (is.null(leg.params$tri.ypos)) 0.25 else leg.params$tri.ypos
+            lht = if (is.null(leg.params$tri.height)) 0.5 else leg.params$tri.height
+            color.bar(lut = cs, xpos=lxp, ypos=ylim.subplot[1] + diff(ylim.subplot)*lyp, width=500, height=diff(ylim.subplot)*lht,
                       text=txt, cex=legend.cex)
         }
 
@@ -5267,19 +5278,20 @@ color.bar <- function(lut, nticks=11, ticks=seq(min, max, len=nticks), title='',
   #dev.new(width=1.75, height=5)
   #plot(c(0,10), c(min,max), type='n', bty='n', xaxt='n', xlab='', yaxt='n', ylab='', main=title)
   #axis(2, ticks, las=1)
-  rect(xpos, ypos, xpos+width, ypos + height, lwd=2)
   #text(xpos+width, ypos, text[1])
   #text(xpos+width, ypos+height, text[2])
   for (i in 1:(length(lut)-1)) {
     y = (i-1)/scale + ypos
-    rect(xpos, y, width, y+1/scale, col=lut[i], border=NA)
+    rect(xpos, y, xpos+width, y+1/scale, col=lut[i], border=NA)
   }
+  ## frame drawn after the fill so it stays visible
+  rect(xpos, ypos, xpos+width, ypos + height, lwd=0.5)
 
-  ## add the text
+  ## add the text: left-aligned just right of each tick, so labels of any length never overlap the bar
   for (i in 1:length(text)) {
     y = ypos + (i-1)/(length(text)-1) * height
     segments(xpos+width, y, xpos+width*1.3, y)
-    text(xpos+width*2.5, y, text[i], cex=cex)
+    text(xpos+width*1.5, y, text[i], cex=cex, adj=c(0, 0.5))
   }
 }
 
@@ -5779,9 +5791,15 @@ draw_x_ticks <- function(xaxis.interval = 'auto', windows, mapped, winlim, xlim,
     tick.text = paste(round(seq.at.og/xaxis.unit, xaxis.round), xaxis.suffix)
 
   ##if (xaxis.nticks > 0)
-  if (!is.na(xaxis.interval) && xaxis.interval > 0)
+  bottom = min(y1.tick, na.rm = TRUE)
+  if (!is.na(xaxis.interval) && xaxis.interval > 0) {
     text(seq.at, y1.tick-tick.len, tick.text,
          cex = xaxis.cex.tick*0.6, srt = 90, adj = c(1, 0.5))
+    ## lowest point of the rotated tick labels, in user y units (returned so the window label can sit below it)
+    w.in = max(graphics::strwidth(tick.text, units = "inches", cex = xaxis.cex.tick*0.6))
+    bottom = min(y1.tick, na.rm = TRUE) - tick.len - w.in * diff(graphics::par("usr")[3:4]) / graphics::par("pin")[2]
+  }
+  invisible(bottom)
 }
 
 
