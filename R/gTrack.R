@@ -4968,11 +4968,12 @@ draw.triangle <- function(grl,mdata,y,
                 txt = format(signif(c(cmap.min, 0.5*(cmap.max-cmap.min) + cmap.min, cmap.max), 2), trim = TRUE)
             else ## log10 data: label the back-transformed values at the bottom, middle and top of the color range
                 txt = format(signif(10^(cmap.min + c(0, 1/2, 1)*(cmap.max-cmap.min)), 2), trim = TRUE)
-            ## leg.params: xpos (x in triangle coordinates, default 0 = left edge), ypos and height (fractions of the track
-            ## height, defaults 0.25 and 0.5); e.g. ypos = 0.55, height = 0.4 puts the bar in the empty upper-left corner
-            lxp = if (is.null(leg.params$xpos)) 0 else leg.params$xpos
-            lyp = if (is.null(leg.params$ypos)) 0.25 else leg.params$ypos
-            lht = if (is.null(leg.params$height)) 0.5 else leg.params$height
+            ## plot(..., legend.params = list(tri.xpos, tri.ypos, tri.height)): color-bar position for triangle tracks;
+            ## tri.xpos is a fraction of the window width (default 0 = left edge; e.g. 0.97 = right margin), tri.ypos and
+            ## tri.height are fractions of the track height (defaults 0.25 and 0.5)
+            lxp = if (is.null(leg.params$tri.xpos)) 0 else leg.params$tri.xpos * diff(xlim) + xlim[1]
+            lyp = if (is.null(leg.params$tri.ypos)) 0.25 else leg.params$tri.ypos
+            lht = if (is.null(leg.params$tri.height)) 0.5 else leg.params$tri.height
             color.bar(lut = cs, xpos=lxp, ypos=ylim.subplot[1] + diff(ylim.subplot)*lyp, width=500, height=diff(ylim.subplot)*lht,
                       text=txt, cex=legend.cex)
         }
