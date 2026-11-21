@@ -1530,7 +1530,7 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
           range.y = range.y + abs(range.y)*0.2*c(-1, 1)
       }
 
-      this.y.ticks = pretty(range.y, if (!is.null(.gts())) .gts()$yaxis.nticks else formatting(.Object)$yaxis.pretty[j])
+      this.y.ticks = pretty(range.y, if (!is.null(.gts())) { nt.j = formatting(.Object)$yaxis.nticks.track[j]; if (!is.null(nt.j) && !is.na(nt.j)) nt.j else .gts()$yaxis.nticks } else formatting(.Object)$yaxis.pretty[j])  ## pub style: per-track override formatting(gt)$yaxis.nticks.track
 
       if (is.null(formatting(.Object)$y.cap))
           formatting(.Object)$y.cap = NA
