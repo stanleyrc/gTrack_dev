@@ -1333,8 +1333,10 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
   ## set the gaps between the gTracks
   if (is.null(y.gaps) )
     y.gaps = y.heights*0.8
-  else if (length(y.gaps) != length(windows))
-    y.gaps = rep(y.gaps[1], length(windows))
+  else if (length(y.gaps) != length(y.heights))
+    ## one stack (y.heights is a single value since windows became a GRanges): one gap value, not one per window,
+    ## otherwise a user y.gaps with several windows adds a gap per window and squashes the tracks
+    y.gaps = rep(y.gaps[1], length(y.heights))
 
   ## ensure that we don't plot too much
   if (!is.na(max.ranges))
@@ -4966,7 +4968,12 @@ draw.triangle <- function(grl,mdata,y,
                 txt = format(signif(c(cmap.min, 0.5*(cmap.max-cmap.min) + cmap.min, cmap.max), 2), trim = TRUE)
             else ## log10 data: label the back-transformed values at the bottom, middle and top of the color range
                 txt = format(signif(10^(cmap.min + c(0, 1/2, 1)*(cmap.max-cmap.min)), 2), trim = TRUE)
-            color.bar(lut = cs, xpos=0, ypos=ylim.subplot[1] + diff(ylim.subplot)*0.25, width=500, height=diff(ylim.subplot)*0.5,
+            ## leg.params: xpos (x in triangle coordinates, default 0 = left edge), ypos and height (fractions of the track
+            ## height, defaults 0.25 and 0.5); e.g. ypos = 0.55, height = 0.4 puts the bar in the empty upper-left corner
+            lxp = if (is.null(leg.params$xpos)) 0 else leg.params$xpos
+            lyp = if (is.null(leg.params$ypos)) 0.25 else leg.params$ypos
+            lht = if (is.null(leg.params$height)) 0.5 else leg.params$height
+            color.bar(lut = cs, xpos=lxp, ypos=ylim.subplot[1] + diff(ylim.subplot)*lyp, width=500, height=diff(ylim.subplot)*lht,
                       text=txt, cex=legend.cex)
         }
 
