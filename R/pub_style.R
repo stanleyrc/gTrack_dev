@@ -53,7 +53,7 @@
 #'   (the classic gTrack gGraph hook); the walk-path bells use the exit / entry side of each walk segment the same way
 #' @param arc.hook.mm horizontal reach of the hook in mm
 #' @param title.pos where track titles go: "top" (default, above the track's top-left corner, unchanged), "left" (left of the
-#'   y tick labels, right-aligned and centred on the track, so titles never collide with the top tick or the row above) or
+#'   y tick labels, right-aligned and centered on the track, so titles never collide with the top tick or the row above) or
 #'   "inside" (inside the track's top-right corner, with a white halo). A per-track formatting name.pos ("right", "left",
 #'   "inside", "top") overrides it.
 #' @return list
