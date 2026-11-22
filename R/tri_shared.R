@@ -33,7 +33,7 @@
 #' @name gt_tri_diff
 #' @title Difference map of two triangle (mdata) tracks
 #' @description
-#' Returns a triangle gTrack of mdata(a) - mdata(b) on a diverging palette centred on 0 (0 is the white background and is
+#' Returns a triangle gTrack of mdata(a) - mdata(b) on a diverging palette centered on 0 (0 is the white background and is
 #' not drawn per pixel). Both tracks must be built on the same bins (e.g. two Hi-C clusters from one gMatrix binning).
 #' @param a,b length-1 gTracks with mdata on identical ranges
 #' @param name track name
