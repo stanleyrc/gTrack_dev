@@ -1337,6 +1337,9 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
     for (f in intersect(names(dotdot.args), names(formatting(.Object))))
       formatting(.Object)[, f] = dotdot.args[[f]]
 
+  ## loose = FALSE (formatting or plot argument): hide loose-end nodes and their edges (gGraph tracks)
+  .Object = .gt_drop_loose(.Object, dotdot.args$loose)
+
   ## set the window gap .. so that windows don't collide
   if (is.null(win.gap))
       win.gap = sum(as.numeric(width(windows)))/30
