@@ -1219,6 +1219,10 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
 #' $arrow (arrow flag), $col.arrow (arrow color), $v (vertical spline bulge), $w (horizontal spline bulge)
 #' @param gap scalar numeric specifying gap between windows (only relevant if windows has length>1). Units of the gap are in genome coordinates
 #' @param max.ranges scalar numeric > 0 specifying max number of ranges to draw in a window (via sampling).  If specified, overrides gTrack max.ranges formatting feature.
+#' @param band.params list for row bands (formatting band.col = strip color, band.label = text beside it, band.group = rows
+#' bracketed together and labeled with the group name, band.group.col = bracket color): offset.mm (distance of the strip's
+#' right edge from the first window, default 9), strip.mm (strip width, 1.2), bracket.mm (gap from label column to bracket),
+#' label.mm (width reserved for band labels; default measured), cex.
 #' @param ..., additional last-minute formatting changes to the gtrack can be entered here (eg col = 'blue')
 #'
 #' @docType methods
@@ -1240,6 +1244,7 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
                    verbose=FALSE,
                    legend.params = list(),
                    style = getOption("gTrack.style"), ## publication style list, see pub_style(); NULL = classic gTrack look
+                   band.params = list(), ## row bands: offset.mm, strip.mm, bracket.mm, cex (see bands.R); bands come from formatting band.col / band.label / band.group
                    ... ## additional args to draw.grl OR last minute formatting changes to gTrack object
                    )
 {
@@ -1959,7 +1964,9 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
 
   }
 
-  invisible(.gt_layout(layout.rows, this.windows, window.segs[[i]], ylim.stacks))
+  lay = .gt_layout(layout.rows, this.windows, window.segs[[i]], ylim.stacks)
+  .gt_draw_bands(.Object, lay, band.params) ## row bands and group brackets (bands.R); nothing drawn without band.* formatting
+  invisible(lay)
 }
  
 #})
