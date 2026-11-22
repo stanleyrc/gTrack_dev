@@ -390,8 +390,7 @@ gTrack = function(data = NULL, ##
       xaxis.label.angle = xaxis.label.angle, xaxis.ticklen = xaxis.ticklen,
       xaxis.cex.tick = xaxis.cex.tick, sep.lty = sep.lty, sep.lwd = sep.lwd, sep.bg.col = sep.bg.col,
       sep.draw = sep.draw, y0 = y0, y1 = y1, m.sep.lwd = m.sep.lwd, #m.bg.col = m.bg.col,
-      cmap.min = cmap.min, cmap.max = cmap.max, bg.col = bg.col, y.log1p = y.log1p, y.group = y.group)
-      cmap.min = cmap.min, cmap.max = cmap.max, bg.col = bg.col,
+      cmap.min = cmap.min, cmap.max = cmap.max, bg.col = bg.col, y.log1p = y.log1p, y.group = y.group,
       raster = raster, raster.field = raster.field, raster.col = raster.col, raster.mid = raster.mid)
 }
 
@@ -1755,12 +1754,11 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
       all.args$bg.value = all.args$tri.bg.value
       window.segs[[i]] <- do.call('draw.triangle', all.args[names(all.args) %in% c("grl","y","mdata","ylim.parent","windows","win.gap","sigma", "max.ranges",
                                                                                    "cmap.min","cmap.max", "m.sep.lwd","legend","leg.params",
-                                                                                   "islog","gr.colormap","if.flip")])
+                                                                                   "islog","gr.colormap","if.flip","bg.value")])
     } else if (isTRUE(as.logical(formatting(.Object[j])$raster))) { ## raster matrix track (raster.R)
       window.segs[[i]] <- do.call('draw.raster', all.args[names(all.args) %in% c('grl', 'y', 'windows', 'win.gap', 'raster.field', 'raster.col',
                                                                                'raster.mid', 'cmap.min', 'cmap.max', 'raster.px',
                                                                                'raster.labels', 'raster.legend')])
-                                                                                   "islog","gr.colormap","if.flip","bg.value")])
     } else {
       window.segs[[i]] <- do.call('draw.grl', all.args)
     }
