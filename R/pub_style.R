@@ -52,6 +52,10 @@
 #'   past both breakends, a deletion-like one arches between the inner edges and an inversion (++ / --) leaves both ends on the same side
 #'   (the classic gTrack gGraph hook); the walk-path bells use the exit / entry side of each walk segment the same way
 #' @param arc.hook.mm horizontal reach of the hook in mm
+#' @param title.pos where track titles go: "top" (default, above the track's top-left corner, unchanged), "left" (left of the
+#'   y tick labels, right-aligned and centred on the track, so titles never collide with the top tick or the row above) or
+#'   "inside" (inside the track's top-right corner, with a white halo). A per-track formatting name.pos ("right", "left",
+#'   "inside", "top") overrides it.
 #' @return list
 #' @export
 pub_style = function(family = "Helvetica", fontsize = 7, title.size = 8, title.font = 1, label.size = 6,
@@ -60,7 +64,7 @@ pub_style = function(family = "Helvetica", fontsize = 7, title.size = 8, title.f
                      yaxis.nticks = 2, sep.col = "grey45", sep.lty = 2, sep.lwd = 0.4,
                      mar.mm = c(6.5, 7, 1, 2), ygrid = FALSE, win.widths = NULL, xaxis.chr.merge = FALSE,
                      arc.style = "gtrack", arc.band = 0.35, arc.span = c(1e3, 1e8), arc.range = c(0.3, 1), label.halo = TRUE,
-                     dangle.mm = c(1.6, 1.4), arc.strand = FALSE, arc.hook.mm = 1.2)
+                     dangle.mm = c(1.6, 1.4), arc.strand = FALSE, arc.hook.mm = 1.2, title.pos = "top")
 {
   structure(as.list(environment()), class = c("gTrackStyle", "list"))
 }

@@ -1733,7 +1733,18 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
           ylab.angle = 0
       }
       this.cex.ylabel = ifelse(!is.null(formatting(.Object[j])$cex.ylabel), formatting(.Object[j])$cex.ylabel, cex.ylabel)
-      if (!is.null(st <- .gts()) && identical(formatting(.Object[j])$name.pos, 'right')) ## title right of the last window, centred on the track
+      tpos = if (!is.null(st <- .gts())) { np = formatting(.Object[j])$name.pos; if (!is.null(np) && !is.na(np)) np else if (!is.null(st$title.pos)) st$title.pos else 'top' } else NA
+      tcol = if (!is.null(formatting(.Object[j])$name.col) && !is.na(formatting(.Object[j])$name.col)) formatting(.Object[j])$name.col else 'black'
+      if (!is.null(st) && identical(tpos, 'left')) ## title left of the y tick labels, right-aligned, centred on the track
+      {
+        tl = if (!all(is.na(this.y.grid)) && isTRUE(formatting(.Object)$yaxis[j])) max(strwidth(names(this.y.grid), cex = .pt2cex(st$fontsize))) else 0
+        text(min(window.segs[[i]]$start) - .mm2x(0.8 + st$tick.mm + st$ylab.gap.mm + 1.2) - tl, mean(unlist(this.ylim.subplot[j, c('start', 'end')])),
+             this.tname, adj = c(1, 0.5), cex = .pt2cex(st$title.size), font = st$title.font, col = tcol)
+      }
+      else if (!is.null(st) && identical(tpos, 'inside')) ## title inside the top-right corner of the track, with a halo
+        .halo_text(max(window.segs[[i]]$end) - .mm2x(0.6), this.ylim.subplot[j, 'end'], this.tname, col = tcol,
+                   cex = .pt2cex(st$title.size), adj = c(1, 1))
+      else if (!is.null(st) && identical(tpos, 'right')) ## title right of the last window, centred on the track
         text(max(window.segs[[i]]$end) + .mm2x(1.2), mean(unlist(this.ylim.subplot[j, c('start', 'end')])),
              this.tname, adj = c(0, 0.5), cex = .pt2cex(st$title.size), font = st$title.font,
              col = if (!is.null(formatting(.Object[j])$name.col) && !is.na(formatting(.Object[j])$name.col)) formatting(.Object[j])$name.col else 'black')
