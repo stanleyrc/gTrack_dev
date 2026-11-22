@@ -258,6 +258,8 @@ setMethod('initialize', 'gTrack', function(.Object, data, mdata, edges, vars, co
 #' @param sep.draw Logical allowing separators to be turned off [FALSE]
 #' @param cmap.min minimum saturating data value of color map for triangle plot
 #' @param cmap.max maximum saturating data value of color map for triangle plot
+#' @param y.log1p vector or scalar logical; y = log10(1 + value) with ticks labeled in original units (0, 1, 2, 5, 10, ...), for tracks mixing 1 and 400 copies (formatting)
+#' @param y.group vector or scalar character; tracks with the same non-NA y.group are drawn on one shared y range (formatting; see plot.gTrack y.policy)
 #' @param labels.suppress whether to suppress labels (both GRangesList and GRanges)
 #' @param labels.suppress.gr whether to suppress GRanges labels
 #' @param labels.suppress.gr whether to suppress GRangesList labels
@@ -349,6 +351,8 @@ gTrack = function(data = NULL, ##
     labels.suppress.grl = labels.suppress,
     labels.suppress.gr = labels.suppress,
                   bg.col = 'white', ## background color of whole thing
+                  y.log1p = FALSE, ## y = log10(1 + value), ticks in original units (see plot.gTrack)
+                  y.group = NA, ## tracks with the same y.group share one y range (see plot.gTrack y.policy)
     formatting = NA,
     if.flip=FALSE) {
 
@@ -378,7 +382,7 @@ gTrack = function(data = NULL, ##
       xaxis.label.angle = xaxis.label.angle, xaxis.ticklen = xaxis.ticklen,
       xaxis.cex.tick = xaxis.cex.tick, sep.lty = sep.lty, sep.lwd = sep.lwd, sep.bg.col = sep.bg.col,
       sep.draw = sep.draw, y0 = y0, y1 = y1, m.sep.lwd = m.sep.lwd, #m.bg.col = m.bg.col,
-      cmap.min = cmap.min, cmap.max = cmap.max, bg.col = bg.col)
+      cmap.min = cmap.min, cmap.max = cmap.max, bg.col = bg.col, y.log1p = y.log1p, y.group = y.group)
 }
 
 
@@ -1223,6 +1227,9 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
 #' bracketed together and labeled with the group name, band.group.col = bracket color): offset.mm (distance of the strip's
 #' right edge from the first window, default 9), strip.mm (strip width, 1.2), bracket.mm (gap from label column to bracket),
 #' label.mm (width reserved for band labels; default measured), cex.
+#' @param y.policy per-row y policy: NULL or 'own' (each track its own range, the default), 'shared' (every track with a y.field
+#' shares one range), 'log1p' (every y track on log10(1 + value)), 'shared.log1p' (both). Tracks with the same formatting
+#' y.group always share their range; user y0 / y1 are kept.
 #' @param ..., additional last-minute formatting changes to the gtrack can be entered here (eg col = 'blue')
 #'
 #' @docType methods
@@ -1245,6 +1252,7 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
                    legend.params = list(),
                    style = getOption("gTrack.style"), ## publication style list, see pub_style(); NULL = classic gTrack look
                    band.params = list(), ## row bands: offset.mm, strip.mm, bracket.mm, cex (see bands.R); bands come from formatting band.col / band.label / band.group
+                   y.policy = NULL, ## NULL / 'own' (default: each track its own y), 'shared' (all y tracks share one range), 'log1p', 'shared.log1p'
                    ... ## additional args to draw.grl OR last minute formatting changes to gTrack object
                    )
 {
@@ -1339,6 +1347,8 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
 
   ## loose = FALSE (formatting or plot argument): hide loose-end nodes and their edges (gGraph tracks)
   .Object = .gt_drop_loose(.Object, dotdot.args$loose)
+  ## per-row y policy: shared ranges for y.group / y.policy = 'shared', log1p for y.policy = '*log1p'
+  .Object = .gt_y_policy(.Object, y.policy, windows)
 
   ## set the window gap .. so that windows don't collide
   if (is.null(win.gap))
@@ -1553,7 +1563,8 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
 
       if (y.log1p) { ## ticks at 0, 1, 2, 5, 10, 20, 50, 100, ... (original units), at most yaxis.nticks + 1 of them, always 0 and the top one
         orig = c(0, as.vector(outer(c(1, 2, 5), 10^(0:5))))
-        orig = orig[log10(1 + orig) <= range.y[2] + 1e-9]
+        above = which(log10(1 + orig) > range.y[2] + 1e-9)[1] ## one tick at or above the data maximum, so the top values are not capped
+        orig = orig[seq_len(if (is.na(above)) length(orig) else above)]
         nt = if (!is.null(.gts())) { nt.j = formatting(.Object)$yaxis.nticks.track[j]; if (!is.null(nt.j) && !is.na(nt.j)) nt.j else .gts()$yaxis.nticks } else 3
         keep = unique(c(1, round(seq(1, length(orig), length.out = min(length(orig), nt + 1)))))
         this.y.ticks = structure(log10(1 + orig[keep]), orig = orig[keep])
