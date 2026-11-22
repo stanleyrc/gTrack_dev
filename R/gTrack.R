@@ -4073,6 +4073,12 @@ draw.grl = function(grl,
                        cex.arrow = 0.2*edges$cex.arrow,
                        col.arrow = edges$col,
                        lwd = edges$lwd, lty = edges$lty, col = edges$col)
+            if (!is.null(edges$bars)) ## per-group support bars at the arc apex (edge_bars.R)
+            {
+              bar.y = pmax(edges$y.pos.from, edges$y.pos.to) + ifelse(edges$type == 'U', 0.75*abs(edges$v), 0)
+              .gt_edge_bars(edges, (edges$x.pos.from + edges$x.pos.to)/2, ifelse(edges$dangle, NA, bar.y))
+              if (!is.null(edges$label)) edges$v = edges$v + sign(edges$v + 1e-9) * 2 * .gt_bars_h(edges, seq_len(nrow(edges))) ## labels above the bars
+            }
 
             if (!is.null(edges$label))
             {

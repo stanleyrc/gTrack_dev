@@ -295,6 +295,13 @@ gtrack_grob = function(gt, windows, style = pub_style(), ...)
       }
     }
   }
+  ## per-group support bars at the bell apex (edge_bars.R); labels go above them
+  if (!is.null(edges$bars))
+  {
+    b = which(!is.na(apex))
+    .gt_edge_bars(edges[b, ], (edges$x.pos.from[b] + edges$x.pos.to[b]) / 2, apex[b])
+    apex[b] = apex[b] + .gt_bars_h(edges, b)
+  }
   ## edge labels above the bell apex; white halo; moved apart when they overlap each other or an arc
   l = which(!is.na(apex) & !is.na(lb) & nzchar(lb))
   lab.col = if (!is.null(edges$label.col)) edges$label.col else edges$col
