@@ -1240,6 +1240,9 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
 #' @param y.policy per-row y policy: NULL or 'own' (each track its own range, the default), 'shared' (every track with a y.field
 #' shares one range), 'log1p' (every y track on log10(1 + value)), 'shared.log1p' (both). Tracks with the same formatting
 #' y.group always share their range; user y0 / y1 are kept.
+#' @param tri.shared FALSE (default: each triangle track scaled on its own), TRUE (all triangle tracks share one color
+#' scale: the widest of their cmap.min / cmap.max, or the 1-99\% quantiles of their values in the windows; one legend, on the
+#' top triangle track) or a numeric c(min, max) used for all of them. Makes Hi-C clusters drawn side by side comparable.
 #' @param ..., additional last-minute formatting changes to the gtrack can be entered here (eg col = 'blue')
 #'
 #' @docType methods
@@ -1263,6 +1266,7 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
                    style = getOption("gTrack.style"), ## publication style list, see pub_style(); NULL = classic gTrack look
                    band.params = list(), ## row bands: offset.mm, strip.mm, bracket.mm, cex (see bands.R); bands come from formatting band.col / band.label / band.group
                    y.policy = NULL, ## NULL / 'own' (default: each track its own y), 'shared' (all y tracks share one range), 'log1p', 'shared.log1p'
+                   tri.shared = FALSE, ## TRUE: all triangle (mdata) tracks on one color scale, legend once; or c(min, max)
                    ... ## additional args to draw.grl OR last minute formatting changes to gTrack object
                    )
 {
@@ -1359,6 +1363,9 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
   .Object = .gt_drop_loose(.Object, dotdot.args$loose)
   ## per-row y policy: shared ranges for y.group / y.policy = 'shared', log1p for y.policy = '*log1p'
   .Object = .gt_y_policy(.Object, y.policy, windows)
+  ## one color scale for all triangle tracks (tri_shared.R)
+  if (!identical(tri.shared, FALSE))
+    .Object = .gt_tri_shared(.Object, tri.shared, windows)
 
   ## set the window gap .. so that windows don't collide
   if (is.null(win.gap))
@@ -1745,6 +1752,7 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
     if (formatting(.Object[j])$triangle)
     {
       all.args$sigma= all.args$smooth
+      all.args$bg.value = all.args$tri.bg.value
       window.segs[[i]] <- do.call('draw.triangle', all.args[names(all.args) %in% c("grl","y","mdata","ylim.parent","windows","win.gap","sigma", "max.ranges",
                                                                                    "cmap.min","cmap.max", "m.sep.lwd","legend","leg.params",
                                                                                    "islog","gr.colormap","if.flip")])
@@ -1752,6 +1760,7 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
       window.segs[[i]] <- do.call('draw.raster', all.args[names(all.args) %in% c('grl', 'y', 'windows', 'win.gap', 'raster.field', 'raster.col',
                                                                                'raster.mid', 'cmap.min', 'cmap.max', 'raster.px',
                                                                                'raster.labels', 'raster.legend')])
+                                                                                   "islog","gr.colormap","if.flip","bg.value")])
     } else {
       window.segs[[i]] <- do.call('draw.grl', all.args)
     }
@@ -4902,7 +4911,8 @@ draw.triangle <- function(grl,mdata,y,
                           leg.params = list(),
                           min.gapwidth = 1,
                           islog = FALSE,
-                          if.flip = FALSE) {
+                          if.flip = FALSE,
+                          bg.value = NA) { ## value painted as the background and not drawn per pixel (default: cmap.min), e.g. 0 for a difference map
 
   # if (!is.null(gr.colormap)) {
   #   if (!is.null(names(gr.colormap)))
@@ -5032,6 +5042,8 @@ draw.triangle <- function(grl,mdata,y,
   ## then too ... 
   if(is.na(m.bg.col)){
     m.bg.col = cs[1]
+    if (!is.null(bg.value) && !is.na(bg.value)) ## e.g. 0 in a diverging difference map: background = the color of that value
+      m.bg.col = cs[max(1, min(length(cs), floor(affine.map(min(max(bg.value, cmap.min), cmap.max), xlim = c(cmap.min, cmap.max), ylim = c(1, 100)))))]
   }
  
   ## draw the background BOXES using the min color
@@ -5066,7 +5078,8 @@ draw.triangle <- function(grl,mdata,y,
 
   ## set the color scale
   #bgx = .all.xpairs(grl.segs$pos1, grl.segs$pos2)
-  ij = as.data.table(Matrix::which(mdata>cmap.min, arr.ind = TRUE))
+  ij = if (!is.null(bg.value) && !is.na(bg.value)) as.data.table(Matrix::which(mdata != bg.value, arr.ind = TRUE))
+       else as.data.table(Matrix::which(mdata>cmap.min, arr.ind = TRUE))
   setnames(ij, c('i', 'j'))
   setkeyv(ij, c('i', 'j'))
   bgx = data.frame(grl.segs$pos1[ij$i], grl.segs$pos2[ij$i],
