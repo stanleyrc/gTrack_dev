@@ -1398,10 +1398,12 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
   this.xaxis.pos.label = this.ylim.subplot$start[1]-5*bottom.gaps[i]/6-this.tmp.bottom.gap
   ylim.stacks[i, 'xaxis.pos'] = this.xaxis.pos
 
+  layout.rows = vector('list', length(.Object)) ## per-track row coordinates, returned invisibly (see gt_layout)
   ## loop through the gTracks
   for (j in 1:length(.Object))
   {
     par(xpd = NA);
+    this.y.ticks = NULL
     cmap = colormap(.Object)[[j]];
     cfield = names(colormap(.Object))[j]
 
@@ -1722,6 +1724,7 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
     }
 
     this.tname = formatting(.Object[j])$track.name
+    layout.rows[[j]] = .gt_layout_row(.Object, j, this.ylim.subplot, this.y.ticks, this.tname)
 
     if (!is.na(this.tname))
     {
@@ -1956,6 +1959,7 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
 
   }
 
+  invisible(.gt_layout(layout.rows, this.windows, window.segs[[i]], ylim.stacks))
 }
  
 #})
