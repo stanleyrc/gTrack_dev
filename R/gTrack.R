@@ -258,6 +258,10 @@ setMethod('initialize', 'gTrack', function(.Object, data, mdata, edges, vars, co
 #' @param sep.draw Logical allowing separators to be turned off [FALSE]
 #' @param cmap.min minimum saturating data value of color map for triangle plot
 #' @param cmap.max maximum saturating data value of color map for triangle plot
+#' @param raster logical; draw this track as a raster matrix (rows x bins image, e.g. a cells x bins copy-number heat map); the data are bins with the matrix in their metadata (formatting)
+#' @param raster.field name of a matrix metadata column (bins x rows); NA uses every numeric metadata column as one row (formatting)
+#' @param raster.col comma-separated palette for the raster track, default "#2166AC,white,#B2182B" (formatting)
+#' @param raster.mid value drawn with the middle palette color, e.g. 2 copies (formatting)
 #' @param labels.suppress whether to suppress labels (both GRangesList and GRanges)
 #' @param labels.suppress.gr whether to suppress GRanges labels
 #' @param labels.suppress.gr whether to suppress GRangesList labels
@@ -349,6 +353,10 @@ gTrack = function(data = NULL, ##
     labels.suppress.grl = labels.suppress,
     labels.suppress.gr = labels.suppress,
                   bg.col = 'white', ## background color of whole thing
+                  raster = FALSE, ## raster matrix track: cells x bins image (see draw.raster)
+                  raster.field = NA,
+                  raster.col = NA,
+                  raster.mid = NA,
     formatting = NA,
     if.flip=FALSE) {
 
@@ -378,7 +386,8 @@ gTrack = function(data = NULL, ##
       xaxis.label.angle = xaxis.label.angle, xaxis.ticklen = xaxis.ticklen,
       xaxis.cex.tick = xaxis.cex.tick, sep.lty = sep.lty, sep.lwd = sep.lwd, sep.bg.col = sep.bg.col,
       sep.draw = sep.draw, y0 = y0, y1 = y1, m.sep.lwd = m.sep.lwd, #m.bg.col = m.bg.col,
-      cmap.min = cmap.min, cmap.max = cmap.max, bg.col = bg.col)
+      cmap.min = cmap.min, cmap.max = cmap.max, bg.col = bg.col,
+      raster = raster, raster.field = raster.field, raster.col = raster.col, raster.mid = raster.mid)
 }
 
 
@@ -1717,6 +1726,10 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
       window.segs[[i]] <- do.call('draw.triangle', all.args[names(all.args) %in% c("grl","y","mdata","ylim.parent","windows","win.gap","sigma", "max.ranges",
                                                                                    "cmap.min","cmap.max", "m.sep.lwd","legend","leg.params",
                                                                                    "islog","gr.colormap","if.flip")])
+    } else if (isTRUE(as.logical(formatting(.Object[j])$raster))) { ## raster matrix track (raster.R)
+      window.segs[[i]] <- do.call('draw.raster', all.args[names(all.args) %in% c('grl', 'y', 'windows', 'win.gap', 'raster.field', 'raster.col',
+                                                                               'raster.mid', 'cmap.min', 'cmap.max', 'raster.px',
+                                                                               'raster.labels', 'raster.legend')])
     } else {
       window.segs[[i]] <- do.call('draw.grl', all.args)
     }
