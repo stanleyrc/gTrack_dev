@@ -1547,6 +1547,15 @@ rrbind = function (..., union = TRUE, as.data.table = FALSE)
         nt = if (!is.null(.gts())) { nt.j = formatting(.Object)$yaxis.nticks.track[j]; if (!is.null(nt.j) && !is.na(nt.j)) nt.j else .gts()$yaxis.nticks } else 3
         keep = unique(c(1, round(seq(1, length(orig), length.out = min(length(orig), nt + 1)))))
         this.y.ticks = structure(log10(1 + orig[keep]), orig = orig[keep])
+        ## y.log1p.ticks: labeled ticks in original units (e.g. "1,10,100"), only those in range; the axis still runs from
+        ## 0 to the top of the range (unlabeled end ticks), so rows with the same y1 share one scale
+        lt = formatting(.Object)$y.log1p.ticks
+        if (!is.null(lt) && !is.na(lt[j]) && nzchar(lt[j])) {
+          lt = as.numeric(strsplit(as.character(lt[j]), "[,; ]+")[[1]]); top = range.y[2]
+          lt = sort(unique(lt[is.finite(lt) & lt > 0 & log10(1 + lt) <= top + 1e-9]))
+          this.y.ticks = structure(c(0, log10(1 + lt), top), orig = c("", format(lt, big.mark = ",", trim = TRUE, scientific = FALSE), ""))
+          this.y.ticks = structure(this.y.ticks[!duplicated(round(this.y.ticks, 9))], orig = attr(this.y.ticks, "orig")[!duplicated(round(this.y.ticks, 9))])
+        }
         range.y[1] = 0
       } else
       this.y.ticks = pretty(range.y, if (!is.null(.gts())) { nt.j = formatting(.Object)$yaxis.nticks.track[j]; if (!is.null(nt.j) && !is.na(nt.j)) nt.j else .gts()$yaxis.nticks } else formatting(.Object)$yaxis.pretty[j])  ## pub style: per-track override formatting(gt)$yaxis.nticks.track

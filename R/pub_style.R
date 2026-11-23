@@ -142,14 +142,15 @@ gtrack_grob = function(gt, windows, style = pub_style(), ...)
   cex = .pt2cex(st$fontsize)
   tl = .mm2x(st$tick.mm)
   graphics::segments(x, min(line.loc), x, max(line.loc), lwd = st$lwd.axis, lend = 1)
-  graphics::segments(x, line.loc, x - tl, line.loc, lwd = st$lwd.axis, lend = 1)
   lab = names(line.loc)
-  if (length(line.loc) > 2) ## thin labels that would overlap (keep the first and every k-th)
+  ## ticks named "" (e.g. the unlabeled 0 and top ends of a y.log1p.ticks axis) only set the axis extent: no tick mark
+  real = if (is.null(lab)) rep(TRUE, length(line.loc)) else nzchar(lab)
+  graphics::segments(x, line.loc[real], x - tl, line.loc[real], lwd = st$lwd.axis, lend = 1)
+  if (!is.null(lab) && sum(real) > 1) ## thin labels that would overlap: greedy from the bottom, over the labeled ticks only
   {
     h = 1.15 * graphics::strheight("0", cex = cex)
-    k = ceiling(h / min(diff(sort(line.loc))))
-    if (k > 1)
-      lab[(seq_along(lab) - 1) %% k != 0] = ""
+    o = order(line.loc); last = -Inf
+    for (i in o[real[o]]) if (line.loc[i] - last < h) lab[i] = "" else last = line.loc[i]
   }
   graphics::text(x - tl - .mm2x(st$ylab.gap.mm), line.loc, lab, adj = c(1, 0.5), cex = cex)
 }
